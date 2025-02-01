@@ -22,6 +22,18 @@ class BookIn(BaseModel):
     author: str = Field(min_length=3)
     description: str = Field(min_length=10)
     rating: int = Field(gt=0, lt=6)
+    
+    model_config = {
+        "json_schema_extra":{
+            "example": {
+                "id": 1,
+                "title": "Book1",
+                "author": "Author1",
+                "description": "This is a book",
+                "rating": 5
+            }
+        }
+    }
 
 BOOKS = [
     Book(1,'Dev ops' , 'Mukhtar Ahmed','Its nice book',5),
@@ -46,6 +58,16 @@ def create_book(book : BookIn):
         'total': len(BOOKS),
         'data': BOOKS
     }
+    
+@app.get('/books/{book_id}')
+def read_book(book_id:int):
+    for book in BOOKS:
+        if book.id == book_id:
+            return {
+                'message': 'Sucess',
+                'data': book
+                }
+    return {'message': 'Book not found'}
     
 def find_book_id(book: Book):
     if(len(BOOKS) > 0):
