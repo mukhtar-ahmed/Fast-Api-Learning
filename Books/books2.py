@@ -39,7 +39,7 @@ BOOKS = [
     Book(1,'Dev ops' , 'Mukhtar Ahmed','Its nice book',5),
     Book(2,'Python' , 'Mukhtar Ahmed','Its nice book',4),
     Book(3,'Java' , 'Mukhtar Ahmed','Its nice book',3),
-    Book(3,'c++' , 'Awais','Average',2),
+    Book(3,'c++' , 'Awais','Average',5),
 ]
 
 @app.get('/books')
@@ -68,6 +68,54 @@ def read_book(book_id:int):
                 'data': book
                 }
     return {'message': 'Book not found'}
+
+
+
+@app.get("/books/")
+async def bookByRating(book_by_rating: int):
+    books = []
+    for book in BOOKS:
+        if book.rating == book_by_rating:
+            books.append(book)
+    return {
+        'message':'Sucess',
+        'total':len(books),
+        'data':books
+    }
+
+
+
+@app.put("/books/{book_id}")
+async def update_book(book_id: int, book: BookIn):
+    for i, book in enumerate(BOOKS):
+        if book.id == book_id:
+            BOOKS[i] = book.dict()
+            return {
+                'message': 'Sucess',
+                'data': BOOKS[i]
+                }
+        return {'message': 'Book not found'}
+    
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     
 def find_book_id(book: Book):
     if(len(BOOKS) > 0):
