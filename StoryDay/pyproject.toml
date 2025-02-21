@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "storyday"
+version = "0.1.0"
+description = ""
+authors = ["mukhtar-ahmed <kh.mukhtar60@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+sqlalchemy = "^2.0.38"
+python-jose = {extras = ["cryptography"], version = "^3.4.0"}
+passlib = "^1.7.4"
+bcrypt = "4.0.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
