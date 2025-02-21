@@ -11,8 +11,6 @@ from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordRequestForm , OAuth2PasswordBearer
 from jose import jwt, JWTError
 
-
-
 router = APIRouter(
     prefix='/auth',
     tags=['Auth']
@@ -51,6 +49,7 @@ def get_db():
         yield db
     finally:
         db.close()
+        
 db_dependency = Annotated[Session, Depends(get_db)]
 bcrypt_context = CryptContext(schemes=['bcrypt'],deprecated='auto')
 token = OAuth2PasswordBearer(tokenUrl='token')
