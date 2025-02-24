@@ -17,6 +17,16 @@ router = APIRouter(
 )
 SECRET_KEY = 'ITSSECRECT'
 ALGORITHM = 'HS256'
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+        
+db_dependency = Annotated[Session, Depends(get_db)]
+bcrypt_context = CryptContext(schemes=['bcrypt'],deprecated='auto')
+oauth2_bearer = OAuth2PasswordBearer(tokenUrl='/auth/token')
 
 class UserIn(BaseModel):
     email:str = Field(min_length=3)
@@ -42,22 +52,12 @@ class UserIn(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
-    
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-        
-db_dependency = Annotated[Session, Depends(get_db)]
-bcrypt_context = CryptContext(schemes=['bcrypt'],deprecated='auto')
-token = OAuth2PasswordBearer(tokenUrl='token')
 
-def create_access_token(username:str, user_id:int, timedata:timedelta):
+def create_access_token(username:str, user_id:int,role:str, timedata:timedelta):
     encode = {
         'sub':username,
-        'id':user_id
+        'id':user_id,
+        'role':role
     }
     expires = datetime.now(timezone.utc) + timedata
     encode.update({'exp':expires})
@@ -65,16 +65,18 @@ def create_access_token(username:str, user_id:int, timedata:timedelta):
     return access_token
 
 
-def get_current_user(token: Annotated[str, Depends(OAuth2PasswordBearer)]):
+def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]):
     try:
         payload = jwt.decode(token=token, key=SECRET_KEY, algorithms=ALGORITHM)
         user_id: int = payload.get('id')
         username: str = payload.get('sub')
+        role: str = payload.get('role')
         if user_id is None or username is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not validate user')
         return {
             'id': user_id,
-            'username': username
+            'username': username,
+            'role':role
         }
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not validate user')
@@ -105,6 +107,7 @@ async def create_user(db: db_dependency ,user:UserIn):
         db.commit()
         db.refresh(user)
     except SQLAlchemyError as e:
+        print(e)
         db.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Error While adding user')
     return user
@@ -113,7 +116,7 @@ async def create_user(db: db_dependency ,user:UserIn):
 @router.post('/token', response_model=Token)
 async def login_for_access_token(db:db_dependency, form_data : Annotated[OAuth2PasswordRequestForm,Depends()]):
     user = authenticate_user(db=db, email=form_data.username,password=form_data.password)
-    access_token = create_access_token(user.username, user.id, timedelta(minutes=30))
+    access_token = create_access_token(user.username, user.id,user.role, timedelta(minutes=30))
     return {"access_token": access_token, "token_type": "bearer"}
     
         

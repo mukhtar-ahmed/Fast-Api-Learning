@@ -56,9 +56,21 @@ class UserOut(BaseModel):
     role: str
     is_active: bool
     
+def get_current_user(token: str):
+    payload = jwt.encode(token, key=SECRET_KEY, algorithm=ALGORITHM)
+    username = payload.get('username')
+    user_id = payload.get("id")
+    if username is None or user_id is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
+    return {
+        "username": username,
+        "id": user_id
+    }
+    
+    
 def create_access_token(username: str, user_id: int, timedata: timedelta):
     encode = {
-        'sub': username,
+        'username': username,
         'id': user_id
         }
     expires = datetime.now(timezone.utc) + timedata
