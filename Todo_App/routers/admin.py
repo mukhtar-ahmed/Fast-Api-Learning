@@ -52,8 +52,3 @@ async def delete_todo(user: db_user, db: db_dependency, todo_id: int):
     return {"message": "Todo deleted"}
     
     
-@router.get('/user')
-async def get_user(user: db_user, db:db_dependency):
-    if user is None:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    return db.query(Users).filter(Users.id == user.get('id')).first()

@@ -6,7 +6,7 @@ from starlette import status
 from fastapi import  APIRouter, Depends, Query, Path, HTTPException
 from pydantic import BaseModel, Field
 from models import User
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.exc import SQLAlchemyError
 from passlib.context import CryptContext
 from jose import jwt
@@ -26,6 +26,7 @@ def get_db():
 
 db_dependency = Annotated[Session, Depends(get_db)]
 bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated = 'auto')
+oauth2_bearer = OAuth2PasswordBearer(tokenUrl='/auth/token')
 SECRET_KEY = 'ITSASECRETKEY'
 ALGORITHM = 'HS256'
 
@@ -56,22 +57,25 @@ class UserOut(BaseModel):
     role: str
     is_active: bool
     
-def get_current_user(token: str):
-    payload = jwt.encode(token, key=SECRET_KEY, algorithm=ALGORITHM)
+def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]):
+    payload = jwt.decode(token, key=SECRET_KEY, algorithms=ALGORITHM)
     username = payload.get('username')
     user_id = payload.get("id")
-    if username is None or user_id is None:
+    role = payload.get("role")
+    if username is None or user_id is None or role is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
     return {
         "username": username,
-        "id": user_id
+        "id": user_id,
+        "role":role
     }
     
     
-def create_access_token(username: str, user_id: int, timedata: timedelta):
+def create_access_token(username: str, user_id: int, timedata: timedelta, role:str):
     encode = {
         'username': username,
-        'id': user_id
+        'id': user_id,
+        'role':role
         }
     expires = datetime.now(timezone.utc) + timedata
     encode.update({
@@ -99,7 +103,7 @@ async def create_user(db:db_dependency, user:UserIn):
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Error while adding the user')
-    access_token = create_access_token(username=new_user.email, user_id=new_user.id, timedata=timedelta(minutes=30))
+    access_token = create_access_token(username=new_user.email, user_id=new_user.id, timedata=timedelta(minutes=30), role=new_user.role)
     return {
                 "access_token": access_token,
                 "token_type": "bearer",
@@ -124,7 +128,7 @@ async def login_for_access_token(db: db_dependency, form_data: Annotated[OAuth2P
         if not hashed_password:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Password is not correct')
         else:
-            access_token = create_access_token(username=user.email, user_id=user.id, timedata=timedelta(minutes=30))
+            access_token = create_access_token(username=user.email, user_id=user.id, timedata=timedelta(minutes=30),role=user.role)
             return {
                 "access_token": access_token,
                 "token_type": "bearer",

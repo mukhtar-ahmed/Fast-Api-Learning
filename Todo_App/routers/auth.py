@@ -118,7 +118,7 @@ async def login_for_access_token(db:db_dependency, form_data : Annotated[OAuth2P
     user = authenticate_user(db=db, email=form_data.username,password=form_data.password)
     access_token = create_access_token(user.username, user.id,user.role, timedelta(minutes=30))
     return {"access_token": access_token, "token_type": "bearer"}
-    
+
         
     
     
