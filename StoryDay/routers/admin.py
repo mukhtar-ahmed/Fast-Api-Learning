@@ -57,3 +57,5 @@ async def delete_story(user:db_user, db:db_dependency, story_id:int):
     db.delete(story_to_delete)
     db.commit()
     return {"message": "Story deleted successfully"}
+
+
