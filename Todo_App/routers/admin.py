@@ -21,7 +21,6 @@ def get_db():
 db_dependency = Annotated[Session, Depends(get_db)]
 db_user = Annotated[dict, Depends(get_current_user)]
 
-        
 @router.get("/todos")
 async def read_all_todos(user: db_user, db: db_dependency):
     if user is None:

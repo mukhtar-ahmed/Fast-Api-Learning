@@ -11,6 +11,7 @@ sqlalchemy = "^2.0.38"
 python-jose = {extras = ["cryptography"], version = "^3.4.0"}
 passlib = "^1.7.4"
 bcrypt = "4.0.1"
+psycopg2 = "^2.9.10"
 
 
 [build-system]
