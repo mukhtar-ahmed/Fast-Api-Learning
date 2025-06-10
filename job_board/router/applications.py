@@ -31,8 +31,15 @@ async def apply_job(current_user:current_user, db:db_session_dep, details:str,id
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail=f"Error {e}")
     
-    # id = Column(Integer,nullable=False,index=True,primary_key=True)
-    # user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
-    # job_id = Column(Integer, ForeignKey("job.id"),nullable=False)
-    # details = Column(String)
-    # created_at = Column(DateTime(timezone=True), default=lambda:datetime.now(timezone.utc))
+@router.get("")
+async def user_applications(current_user:current_user, db:db_session_dep):
+    user_role = current_user.get('role')
+    candidate_id = current_user.get("user_id")
+    email = current_user.get("email")
+    
+    if not all([user_role, candidate_id, email]):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User UNAUTHORIZED")
+    if user_role != Role.candidate.value:
+        raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail="Not has premission")
+    
+    return db.query(Application).filter(Application.user_id == candidate_id).all()

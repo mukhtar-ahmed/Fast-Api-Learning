@@ -33,14 +33,14 @@ class Job(Base):
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     
     company = relationship("User", back_populates="jobs")
-    applications = relationship("Application", back_populates="job")
+    applications = relationship("Application", back_populates="job", cascade='all,delete')
     
 class Application(Base):
     __tablename__ = 'application'
     
     id = Column(Integer,nullable=False,index=True,primary_key=True)
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
-    job_id = Column(Integer, ForeignKey("job.id"),nullable=False)
+    job_id = Column(Integer, ForeignKey("job.id", ondelete='CASCADE'),nullable=False)
     details = Column(String)
     created_at = Column(DateTime(timezone=True), default=lambda:datetime.now(timezone.utc))
     

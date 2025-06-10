@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException,status
 from database import SessionLocal
 from sqlalchemy.orm import session
-from models import User
+from models import User,Role
 from pydantic import BaseModel,EmailStr,Field
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordRequestForm,OAuth2PasswordBearer
@@ -60,6 +60,8 @@ class UserOut(BaseModel):
     class Config:
         orm_mode = True
 
+
+
 def create_jwt(id:int, email:str, role:str, exp:timedelta):
     payload = {
         'user_id':id,
@@ -101,6 +103,13 @@ def get_current_user(token: Annotated[str, Depends(oAuth2_password_bearer)]):
             headers={"WWW-Authenticate": "Bearer"},
         )
         
+def admin_required(user: dict = Depends(get_current_user)):
+    if not all([user.get('role'), user.get("user_id"), user.get("email")]):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User UNAUTHORIZED")
+    if user.get("role") != Role.admin.value:
+        raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail="Not has premission")
+    return user
+    
 @router.post("/create_user",response_model=UserOut, status_code= status.HTTP_201_CREATED)
 async def register_user(db:db_session_dep ,user_data:UserIn):
     db_user = db.query(User).filter(User.email == user_data.email).first()
