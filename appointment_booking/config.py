@@ -5,5 +5,7 @@ class Settings(BaseSettings):
         env_file='.env',env_ignore_empty=True, extra='ignore'
     )
     POSTGRES_DB:str
+    SECRET_KEY:str
+    ALGORITHM:str
 
 settings = Settings()

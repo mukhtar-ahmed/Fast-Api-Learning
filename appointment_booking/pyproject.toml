@@ -11,10 +11,14 @@ fastapi = "^0.115.12"
 uvicorn = {extras = ["standard"], version = "^0.34.3"}
 psycopg2-binary = "^2.9.10"
 sqlalchemy = "^2.0.41"
-pydantic = "^2.11.5"
+pydantic = {extras = ["email"], version = "^2.11.5"}
 pydantic-settings = "^2.9.1"
 python-dotenv = "^1.1.0"
 alembic = "^1.16.1"
+passlib = "^1.7.4"
+bcrypt = "4.0.1"
+python-multipart = "^0.0.20"
+python-jose = {extras = ["cryptography"], version = "^3.5.0"}
 
 
 [build-system]
