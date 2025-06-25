@@ -1,7 +1,7 @@
 from typing import List, Annotated
 from pydantic import BaseModel, EmailStr, Field,constr
 from app.auth.models.user import RoleEnum
-from datetime import datetime,time
+from datetime import date, datetime,time
 
 class RoleIn(BaseModel):
     name:RoleEnum 
@@ -78,3 +78,24 @@ class WorkingHourIn(BaseModel):
     staff_id:int
     schedule: List[DayWorkingHour]
     
+class ServiceIn(BaseModel):
+    name:str = Field(..., min_length=3)
+    description:str = Field(..., min_length=10)
+    duration_minutes:int
+
+class ServiceOut(BaseModel):
+    id: int
+    name: str
+    description: str
+    duration_minutes: int
+    staff_id: int
+    
+    model_config= {
+        "from_attributes":True
+    }
+    
+class AppointmentIn(BaseModel):
+    staff_id:int
+    service_id:int
+    appointment_time:time
+    appointment_date:date

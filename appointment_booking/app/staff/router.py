@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException,status
 from app.dependencies import current_user_dp,db_session_dp
-from app.auth.models.user import Role,RoleEnum, User, StaffProfile, WorkingHour
-from app.auth.schema.user import UserOut, StaffOut, RoleOut, StaffIn, WorkingHourIn
+from app.auth.models.user import Role,RoleEnum, User, StaffProfile, WorkingHour, Service
+from app.auth.schema.user import UserOut, StaffOut, RoleOut, StaffIn, WorkingHourIn, DayWorkingHour, ServiceIn
 from sqlalchemy.exc import SQLAlchemyError
 from app.logging.logger import logger
 
@@ -113,6 +113,113 @@ async def get_working_hours(current_user:current_user_dp,db:db_session_dp):
     if db_staff_working_hours is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Working hours not found")
     return {
-        'message': 'Staff Working hours featched',
+        'message': 'Staff Working hours fetched',
         'data':db_staff_working_hours
     }
+    
+@router.put('working_hours/{id}')
+async def update_working_hour(current_user:current_user_dp,db:db_session_dp,id:int, day_working_data:DayWorkingHour ):
+    role = db.query(Role).filter(Role.id == current_user.get("role_id")).first()
+    if role is None or role.name != RoleEnum.staff.value:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized access") 
+    # check if user is staff
+    db_staff:StaffProfile = db.query(StaffProfile).filter(StaffProfile.user_id == current_user.get("id")).first()
+    if not db_staff:
+        raise HTTPException(status_code=404, detail="Staff profile not found")
+    
+    work_day = db.query(WorkingHour).filter(WorkingHour.staff_id == db_staff.id, WorkingHour.id == id ).first()
+    
+    if not work_day:
+        return {'message': 'Working Day not found related id'}
+    
+    work_day.day_of_week = day_working_data.day_of_week
+    work_day.start_time = day_working_data.start_time
+    work_day.end_time = day_working_data.end_time
+    
+    db.commit()
+    db.refresh(work_day)
+    return {
+                'message': 'Working Day hours updated Successfully',
+                'data': work_day
+            }
+
+@router.delete('working_hours/{id}')
+async def update_working_hour(current_user:current_user_dp,db:db_session_dp,id:int):
+    role = db.query(Role).filter(Role.id == current_user.get("role_id")).first()
+    if role is None or role.name != RoleEnum.staff.value:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized access") 
+    # check if user is staff
+    db_staff:StaffProfile = db.query(StaffProfile).filter(StaffProfile.user_id == current_user.get("id")).first()
+    if not db_staff:
+        raise HTTPException(status_code=404, detail="Staff profile not found")
+    work_day = db.query(WorkingHour).filter(WorkingHour.staff_id == db_staff.id, WorkingHour.id == id).first()
+    if not work_day:
+        return {'message': 'Working Day not found related id'}
+        
+    
+    db.delete(work_day)
+    db.commit()
+    return {
+                'message': 'Working Day hours Delete Successfully',
+            }
+
+@router.post('/services')
+async def add_service(current_user:current_user_dp,db:db_session_dp, service_data:ServiceIn):
+    role = db.query(Role).filter(Role.id == current_user.get("role_id")).first()
+    if role is None or role.name != RoleEnum.staff.value:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized access") 
+    # check if user is staff
+    db_staff:StaffProfile = db.query(StaffProfile).filter(StaffProfile.user_id == current_user.get("id")).first()
+    if not db_staff:
+        raise HTTPException(status_code=404, detail="Staff profile not found")
+    
+    new_service = Service(
+        staff_id = db_staff.id,
+        name = service_data.name,
+        description = service_data.description,
+        duration_minutes = service_data.duration_minutes
+    )
+    db.add(new_service)
+    db.commit()
+    db.refresh(new_service)
+
+    return {
+        "message": "Service added successfully",
+        "data": {
+            "id": new_service.id,
+            "name": new_service.name,
+            "description": new_service.description,
+            "duration": new_service.duration_minutes,
+            "staff_id": new_service.staff_id
+        }
+    }
+    
+@router.get('/services')
+async def services(current_user:current_user_dp,db:db_session_dp):
+    role = db.query(Role).filter(Role.id == current_user.get("role_id")).first()
+    if role is None or role.name != RoleEnum.staff.value:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized access") 
+    # check if user is staff
+    db_staff:StaffProfile = db.query(StaffProfile).filter(StaffProfile.user_id == current_user.get("id")).first()
+    if not db_staff:
+        raise HTTPException(status_code=404, detail="Staff profile not found")
+    staff_services = db.query(Service).filter(Service.staff_id == db_staff.id).all()
+    return staff_services
+
+@router.delete('/services/{id}')
+async def delete_service(current_user:current_user_dp,db:db_session_dp,id:int):
+    role = db.query(Role).filter(Role.id == current_user.get("role_id")).first()
+    if role is None or role.name != RoleEnum.staff.value:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized access") 
+    # check if user is staff
+    db_staff:StaffProfile = db.query(StaffProfile).filter(StaffProfile.user_id == current_user.get("id")).first()
+    if not db_staff:
+        raise HTTPException(status_code=404, detail="Staff profile not found")
+    staff_service = db.query(Service).filter(Service.staff_id == db_staff.id, Service.id == id).first()
+    if not staff_service:
+        raise HTTPException(status_code=404, detail="Service not found")
+    db.delete(staff_service)
+    db.commit()
+    return {
+                'message': 'Staff Service Delete Successfully',
+            }
