@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, status
-from app.dependencies import db_session_dp,current_user_dp
+from app.dependencies import db_session_dp,current_user_dp,require_roles
 from app.auth.models.user import StaffProfile, WorkingHour, Service, Role, RoleEnum, Appointment, User
 from app.auth.schema.user import AppointmentIn
 
@@ -49,17 +49,7 @@ async def available_slots(db:db_session_dp,staff_id:int,week_day:str,service_id:
     }
     
 @router.post("/")
-async def book_appointment(db:db_session_dp,current_user:current_user_dp,appointment_data :AppointmentIn):
-    user_id = current_user.get('id')
-    user_email = current_user.get('email')
-    role_id = current_user.get('role_id')
-    if not all([user_id,user_email,role_id]):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='UNAUTHORIZED User')
-    # Check Current user has staff role
-    user_role = db.query(Role).filter(Role.id == role_id).first()
-    if user_role is None or user_role.name != RoleEnum.client.value:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User does not have required permission")
-    
+async def book_appointment(db:db_session_dp,appointment_data :AppointmentIn, current_user:dict = require_roles([RoleEnum.client])):
     # Check if staff exist 
     db_staff = db.query(StaffProfile).filter(StaffProfile.id == appointment_data.staff_id).first()
     if not db_staff:
@@ -71,11 +61,6 @@ async def book_appointment(db:db_session_dp,current_user:current_user_dp,appoint
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service not found for selected staff")
     
     appointment_datetime = datetime.combine(appointment_data.appointment_date, appointment_data.appointment_time)
-    
-    # existing_appointment = db.query(Appointment).filter(Appointment.staff_id == appointment_data.staff_id,Appointment.service_id == appointment_data.service_id, Appointment.appointment_time == appointment_datetime).first()
-    # if existing_appointment:
-    #     raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Slot already booked")
-    
     appointment_start = datetime.combine(appointment_data.appointment_date,appointment_data.appointment_time)
     appointment_end = appointment_start + timedelta(minutes=db_service.duration_minutes)
     
@@ -92,7 +77,7 @@ async def book_appointment(db:db_session_dp,current_user:current_user_dp,appoint
         )
     
     new_appointment = Appointment(
-        client_id=user_id,
+        client_id=current_user.get('id'),
         staff_id=appointment_data.staff_id,
         service_id=appointment_data.service_id,
         appointment_time=appointment_datetime,
@@ -109,18 +94,8 @@ async def book_appointment(db:db_session_dp,current_user:current_user_dp,appoint
     }
     
 @router.get('/my')
-async def my_appointments(current_user: current_user_dp, db:db_session_dp):
-    user_id = current_user.get('id')
-    user_email = current_user.get('email')
-    role_id = current_user.get('role_id')
-    if not all([user_id,user_email,role_id]):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='UNAUTHORIZED User')
-    # Check Current user has staff role
-    user_role = db.query(Role).filter(Role.id == role_id).first()
-    if user_role is None or user_role.name != RoleEnum.client.value:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User does not have required permission")
-    
-    client_appointment = db.query(Appointment).filter(Appointment.client_id == user_id).all()
+async def my_appointments(db:db_session_dp,current_user: dict = require_roles([RoleEnum.client])):
+    client_appointment = db.query(Appointment).filter(Appointment.client_id == current_user.get('id')).all()
     if not client_appointment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No appointment booked yet")
     return {
@@ -129,17 +104,7 @@ async def my_appointments(current_user: current_user_dp, db:db_session_dp):
     }
     
 @router.get('/all')
-async def all_appointments(current_user: current_user_dp, db:db_session_dp):
-    user_id = current_user.get('id')
-    user_email = current_user.get('email')
-    role_id = current_user.get('role_id')
-    if not all([user_id,user_email,role_id]):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='UNAUTHORIZED User')
-    # Check Current user has staff role
-    user_role = db.query(Role).filter(Role.id == role_id).first()
-    if user_role is None or user_role.name != RoleEnum.admin.value:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User does not have required permission")
-    
+async def all_appointments(db:db_session_dp,current_user: dict = require_roles([RoleEnum.admin])):
     appointments = db.query(Appointment).all()
     return {
         'total':len(appointments),
@@ -147,17 +112,7 @@ async def all_appointments(current_user: current_user_dp, db:db_session_dp):
     }
 
 @router.get('/staff/{id}')
-async def staff_appointments(current_user: current_user_dp, db:db_session_dp,id:int):
-    user_id = current_user.get('id')
-    user_email = current_user.get('email')
-    role_id = current_user.get('role_id')
-    if not all([user_id,user_email,role_id]):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='UNAUTHORIZED User')
-    # Check Current user has staff role
-    user_role = db.query(Role).filter(Role.id == role_id).first()
-    if user_role is None or user_role.name != RoleEnum.admin.value:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User does not have required permission")
-    
+async def staff_appointments(db:db_session_dp,id:int,current_user: dict = require_roles([RoleEnum.admin])):
     # Check if staff exist
     db_staff = db.query(StaffProfile).filter(StaffProfile.id == id).first()
     if not db_staff:
@@ -176,17 +131,7 @@ async def staff_appointments(current_user: current_user_dp, db:db_session_dp,id:
     }
     
 @router.get('/client/{id}')
-async def client_appointments(current_user: current_user_dp, db:db_session_dp,id:int):
-    user_id = current_user.get('id')
-    user_email = current_user.get('email')
-    role_id = current_user.get('role_id')
-    if not all([user_id,user_email,role_id]):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='UNAUTHORIZED User')
-    # Check Current user has staff role
-    user_role = db.query(Role).filter(Role.id == role_id).first()
-    if user_role is None or user_role.name != RoleEnum.admin.value:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User does not have required permission")
-    
+async def client_appointments( db:db_session_dp,id:int,current_user: dict = require_roles([RoleEnum.admin])):
     # Check if staff exist
     db_client = db.query(User).filter(User.id == id).first()
     if not db_client:
@@ -205,17 +150,7 @@ async def client_appointments(current_user: current_user_dp, db:db_session_dp,id
     }
     
 @router.put('/{id}/cancel')
-async def cancel_appointment(current_user: current_user_dp, db:db_session_dp,id:int):
-    user_id = current_user.get('id')
-    user_email = current_user.get('email')
-    role_id = current_user.get('role_id')
-    if not all([user_id,user_email,role_id]):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='UNAUTHORIZED User')
-    # Check Current user has staff role
-    user_role = db.query(Role).filter(Role.id == role_id).first()
-    if user_role is None or user_role.name != RoleEnum.admin.value:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User does not have required permission")
-    
+async def cancel_appointment(db:db_session_dp,id:int,current_user: dict = require_roles([RoleEnum.admin])): 
     # Check appointment exist
     db_appointment = db.query(Appointment).filter(Appointment.id == id).first()
     if db_appointment is None:
