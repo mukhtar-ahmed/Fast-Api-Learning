@@ -105,97 +105,54 @@ def get_all_roles(current_user:dict, db:Session):
         'data':roles
     }
 
-def create_staff_profile(current_user:dict, db:Session, staff:StaffIn):
-    role = db.query(Role).filter(Role.id == current_user.get("role_id")).first()
-    if role is None or role.name != RoleEnum.admin.value:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized User")
-    db_user = db.query(User).filter(User.id == staff.user_id).first()
-    if db_user is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User Not found')
-    db_user_role = db.query(Role).filter(Role.id == db_user.role_id).first()
-    if db_user_role is None or db_user_role.name != RoleEnum.staff.value:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='User is not a staff member')
-    db_staff = db.query(StaffProfile).filter(StaffProfile.user_id == db_user.id).first()
-    if db_staff is not None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Staff already exist')
-    new_staff_profile = StaffProfile(**staff.model_dump())
-    try:
-        db.add(new_staff_profile)
-        db.commit()
-        db.refresh(new_staff_profile)
-        role_out = RoleOut(
-            id=db_user_role.id,
-            name=db_user_role.name
-        )
-        user_out = UserOut(
-            id=new_staff_profile.user.id,
-            full_name=new_staff_profile.user.full_name,
-            email=new_staff_profile.user.email,
-            role_id=new_staff_profile.user.role_id,
-            is_active=new_staff_profile.user.is_active,
-            created_at=new_staff_profile.user.created_at,
-            updated_at=new_staff_profile.user.updated_at
-        )
-        
-        return StaffOut(
-            id=new_staff_profile.id,
-            bio=new_staff_profile.bio,
-            user=user_out,
-            role=role_out
-        )
+
+# def create_staff_working_hours(current_user=dict, db=Session, working_hours=WorkingHourIn):
+#     # Check if user is admin
+#     role = db.query(Role).filter(Role.id == current_user.get("role_id")).first()
+#     if role is None or role.name != RoleEnum.admin.value:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized access") 
+#     # check if user is staff
+#     db_staff:StaffProfile = db.query(StaffProfile).filter(StaffProfile.user_id == working_hours.staff_id).first() # 3
+#     if not db_staff:
+#         raise HTTPException(status_code=404, detail="Staff profile not found")
+#     print("::::::::::::::::::::::::::::::::::::::::")
+#     print(db_staff.user_id)
+#     print(db_staff.id)
+#     # print()
+#     print(len(working_hours.schedule)) # list
+#     print("::::::::::::::::::::::::::::::::::::::::")
+#     try:
+#         for entry in working_hours.schedule:
+#             # existing_day =  db.query(WorkingHour).filter(WorkingHour.day_of_week.casefold() == entry.day_of_week.casefold())
+#             existing_day = db.query(WorkingHour).filter(WorkingHour.staff_id == db_staff.id,WorkingHour.day_of_week.ilike(entry.day_of_week)).first()
+#             if existing_day:
+#                 raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Working day already exist")
+#             wh = WorkingHour(
+#                 staff_id=db_staff.id,
+#                 day_of_week=entry.day_of_week,
+#                 start_time=entry.start_time,
+#                 end_time=entry.end_time
+#             )
+#             db.add(wh)
+#         db.commit()
+#         return {"message": "Working hours added"}
+#     except SQLAlchemyError as e:
+#         db.rollback()
+#         logger.error(e)
+#         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error while adding : {e}")
     
-    except SQLAlchemyError as e:
-        db.rollback(new_staff_profile)
-        logger.error(f"Error while creating staff: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail=f"Error while creating staff: {e}" )
-    
-def create_staff_working_hours(current_user=dict, db=Session, working_hours=WorkingHourIn):
-    # Check if user is admin
-    role = db.query(Role).filter(Role.id == current_user.get("role_id")).first()
-    if role is None or role.name != RoleEnum.admin.value:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized access") 
-    # check if user is staff
-    db_staff:StaffProfile = db.query(StaffProfile).filter(StaffProfile.user_id == working_hours.staff_id).first() # 3
-    if not db_staff:
-        raise HTTPException(status_code=404, detail="Staff profile not found")
-    print("::::::::::::::::::::::::::::::::::::::::")
-    print(db_staff.user_id)
-    print(db_staff.id)
-    # print()
-    print(len(working_hours.schedule)) # list
-    print("::::::::::::::::::::::::::::::::::::::::")
-    try:
-        for entry in working_hours.schedule:
-            # existing_day =  db.query(WorkingHour).filter(WorkingHour.day_of_week.casefold() == entry.day_of_week.casefold())
-            existing_day = db.query(WorkingHour).filter(WorkingHour.staff_id == db_staff.id,WorkingHour.day_of_week.ilike(entry.day_of_week)).first()
-            if existing_day:
-                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Working day already exist")
-            wh = WorkingHour(
-                staff_id=db_staff.id,
-                day_of_week=entry.day_of_week,
-                start_time=entry.start_time,
-                end_time=entry.end_time
-            )
-            db.add(wh)
-        db.commit()
-        return {"message": "Working hours added"}
-    except SQLAlchemyError as e:
-        db.rollback()
-        logger.error(e)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error while adding : {e}")
-    
-def get_staff_working_hours(current_user=dict, db=Session, id=int):
-    role = db.query(Role).filter(Role.id == current_user.get("role_id")).first()
-    if role is None or role.name != RoleEnum.admin.value:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized access") 
-    # check if user is staff
-    db_staff:StaffProfile = db.query(StaffProfile).filter(StaffProfile.user_id == id).first()
-    if not db_staff:
-        raise HTTPException(status_code=404, detail="Staff profile not found")
-    db_staff_working_hours = db.query(WorkingHour).filter(WorkingHour.staff_id == db_staff.id).all()
-    if db_staff_working_hours is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Working hours not found")
-    return {
-        'message': 'Staff Working hours featched',
-        'data':db_staff_working_hours
-    }
+# def get_staff_working_hours(current_user=dict, db=Session, id=int):
+#     role = db.query(Role).filter(Role.id == current_user.get("role_id")).first()
+#     if role is None or role.name != RoleEnum.admin.value:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized access") 
+#     # check if user is staff
+#     db_staff:StaffProfile = db.query(StaffProfile).filter(StaffProfile.user_id == id).first()
+#     if not db_staff:
+#         raise HTTPException(status_code=404, detail="Staff profile not found")
+#     db_staff_working_hours = db.query(WorkingHour).filter(WorkingHour.staff_id == db_staff.id).all()
+#     if db_staff_working_hours is None:
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Working hours not found")
+#     return {
+#         'message': 'Staff Working hours featched',
+#         'data':db_staff_working_hours
+#     }

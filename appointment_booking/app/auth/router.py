@@ -7,7 +7,7 @@ from app.auth.models.user import User
 from app.auth.schema.user import UserIn,UserOut,RoleIn,StaffIn,StaffOut,WorkingHourIn
 from passlib.context import CryptContext
 from app.logging.logger import logger
-from app.auth.services.user_service import create_user_service,login_user_service,create_user_role,get_all_roles,create_staff_profile,create_staff_working_hours,get_staff_working_hours
+from app.auth.services.user_service import create_user_service,login_user_service,create_user_role,get_all_roles
 from fastapi.security import OAuth2PasswordRequestForm
 from app.dependencies import db_session_dp,current_user_dp
 
@@ -41,15 +41,13 @@ async def create_role(db:db_session_dp,role_data:RoleIn): # current_user:current
 async def get_roles(current_user:current_user_dp,db:db_session_dp):
     return get_all_roles(current_user=current_user,db=db)
 
-@router.post('/create_staff',response_model=StaffOut)
-async def create_staff(current_user:current_user_dp,db:db_session_dp,staff:StaffIn):
-    return create_staff_profile(current_user=current_user,db=db,staff=staff)
 
-@router.post('/create_working_hours')
-async def create_working_hours(current_user:current_user_dp,db:db_session_dp,working_hours:WorkingHourIn):
-    return create_staff_working_hours(current_user=current_user, db=db, working_hours=working_hours)
 
-@router.get('/get_working_hours/{id}')
-async def get_working_hours(current_user:current_user_dp,db:db_session_dp,id:int):
-    return get_staff_working_hours(current_user=current_user, db=db, id=id)
+# @router.post('/create_working_hours')
+# async def create_working_hours(current_user:current_user_dp,db:db_session_dp,working_hours:WorkingHourIn):
+#     return create_staff_working_hours(current_user=current_user, db=db, working_hours=working_hours)
+
+# @router.get('/get_working_hours/{id}')
+# async def get_working_hours(current_user:current_user_dp,db:db_session_dp,id:int):
+#     return get_staff_working_hours(current_user=current_user, db=db, id=id)
     
