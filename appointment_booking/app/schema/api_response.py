@@ -1,6 +1,6 @@
-from typing import Optional
+from typing import Optional,Any
 from pydantic import BaseModel
 
 class APIResponse(BaseModel):
     message:str
-    data:Optional[any] = None
+    data:Optional[Any] = None

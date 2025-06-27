@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
-from app.auth.models.user import Service
-from app.auth.schema.user import ServiceOut
+from app.models.service import Service
+from app.schema.service import ServiceOut
 from app.dependencies import db_session_dp
 
 router = APIRouter(

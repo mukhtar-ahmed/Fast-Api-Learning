@@ -1,8 +1,13 @@
 from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, status
 from app.dependencies import db_session_dp,current_user_dp,require_roles
-from app.auth.models.user import StaffProfile, WorkingHour, Service, Role, RoleEnum, Appointment, User
-from app.auth.schema.user import AppointmentIn
+from app.models.role import RoleEnum
+from app.models.user import User
+from app.models.staff_profile import StaffProfile
+from app.models.appointment import Appointment
+from app.models.service import Service
+from app.models.working_hour import WorkingHour
+from app.schema.appointment import AppointmentIn
 
 router = APIRouter(
     prefix='/appointments',

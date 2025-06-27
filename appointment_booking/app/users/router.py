@@ -1,7 +1,11 @@
 from fastapi import APIRouter,HTTPException,status
 from app.dependencies import db_session_dp,current_user_dp
-from app.auth.models.user import Role, RoleEnum, User, StaffProfile
-from app.auth.schema.user import UserListOut,StaffIn,StaffOut, UserOut, RoleOut
+from app.models.role import Role,RoleEnum
+from app.models.staff_profile import StaffProfile
+from app.models.user import User
+from app.schema.user import UserListOut,UserOut
+from app.schema.role import RoleOut
+from app.schema.staff import StaffIn,StaffOut
 from sqlalchemy.exc import SQLAlchemyError
 from app.logging.logger import logger
 
